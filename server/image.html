@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Image Upload</title>
+</head>
+<body>
+  <h1>Image Upload</h1>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="image" id="imageInput" accept="image/*">
+    <input type="submit" value="Upload Image">
+  </form>
+
+  <script>
+    document.getElementById("uploadForm").addEventListener("submit", function(event) {
+      event.preventDefault(); // Prevent the form from submitting
+
+      var imageInput = document.getElementById("imageInput");
+      var file = imageInput.files[0];
+
+      var formData = new FormData();
+      formData.append("image", file);
+
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "http://127.0.0.1:3000/upload", true); // Update the URL to match the backend server
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+          console.log("Image uploaded successfully");
+        }
+        else{
+            console.log("Not uploaded successfully");
+        }
+      };
+      xhr.send(formData);
+    });
+  </script>
+</body>
+</html>

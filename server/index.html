@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    #image-container {
+      position: relative;
+    }
+
+    #selection {
+      position: absolute;
+      border: 2px dashed red;
+      background-color: rgba(255, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
+  </div>
+
+  <div id="image-container">
+    <img id="image" src="" alt="Selected Image">
+    <div id="selection"></div>
+  </div>
+  
+  
+
+  <script>
+    var selectionCount = 0;
+    var selection = document.getElementById('selection');
+    var imageContainer = document.getElementById('image-container');
+    var startX, startY, endX, endY;
+    var selectedCoordinates = [];
+
+    imageContainer.addEventListener('mousedown', startSelection);
+    imageContainer.addEventListener('mousemove', updateSelection);
+    imageContainer.addEventListener('mouseup', stopSelection);
+
+    function handleImageUpload(event) {
+      var file = event.target.files[0];
+      var reader = new FileReader();
+
+      reader.onload = function(e) {
+        var image = document.getElementById('image');
+        image.src = e.target.result;
+
+        image.onload = function() {
+          imageContainer.style.width = image.width + 'px';
+          imageContainer.style.height = image.height + 'px';
+        };
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function startSelection(event) {
+      startX = event.clientX - imageContainer.offsetLeft;
+      startY = event.clientY - imageContainer.offsetTop;
+      updateSelection(event);
+      selection.style.display = 'block';
+    }
+
+    function updateSelection(event) {
+      if (!startX || !startY) return;
+
+      endX = event.clientX - imageContainer.offsetLeft;
+      endY = event.clientY - imageContainer.offsetTop;
+
+      selection.style.left = Math.min(startX, endX) + 'px';
+      selection.style.top = Math.min(startY, endY) + 'px';
+      selection.style.width = Math.abs(startX - endX) + 'px';
+      selection.style.height = Math.abs(startY - endY) + 'px';
+    }
+
+    function stopSelection(event) {
+      endX = event.clientX - imageContainer.offsetLeft;
+      endY = event.clientY - imageContainer.offsetTop;
+
+      var coordinates = {
+        startX: Math.min(startX, endX),
+        startY: Math.min(startY, endY),
+        endX: Math.max(startX, endX),
+        endY: Math.max(startY, endY),
+        roi_number: ++selectionCount
+      };
+
+      console.log('Selected coordinates:', coordinates);
+
+      selectedCoordinates.push(coordinates);
+
+      startX = startY = endX = endY = undefined;
+      selection.style.display = 'none';
+    }
+
+    function sendCoordinatesToServer() {
+      if (selectedCoordinates.length === 0) {
+        console.log('No coordinates to send.');
+        return;
+      }
+
+      var url = 'http://localhost:3000/save-coordinates'; // Replace with your server endpoint
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(selectedCoordinates)
+      })
+      .then(response => {
+        if (response.ok) {
+          console.log('Coordinates sent successfully.');
+          clearSelections();
+        } else {
+          console.log('Failed to send coordinates. Error:', response.status);
+        }
+      })
+      .catch(error => {
+        console.log('Error:', error);
+      });
+    }
+
+    function clearSelections() {
+      selectedCoordinates = [];
+      selectionCount = 0;
+    }
+
+    function uploadImage(event) {
+      const image = event.target.files[0];
+
+      // Upload the image to the server.
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/upload-image');
+      xhr.setRequestHeader('Content-Type', 'multipart/form-data');
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          console.log('Image uploaded successfully.');
+        } else {
+          console.log('Failed to upload image.');
+        }
+      };
+
+     xhr.send(image);
+  }
+
+
+  </script>
+
+  <button onclick="sendCoordinatesToServer()">Send Coordinates to Server</button>
+  <button onclick="clearSelections()">Clear Selections</button>
+  <!-- <div>
+    <input type="file" name="image" id="image">
+    <button onclick="uploadImage()">Upload Image</button>
+  </div> -->
+</body>
+</html>
